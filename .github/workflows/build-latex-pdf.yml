@@ -16,26 +16,36 @@ jobs:
       - name: Install Pandoc and TeX Live
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-latex-extra
+          sudo apt-get install -y \
+            pandoc \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended
 
       - name: Create output directory
         run: mkdir -p dist-tex
 
-      - name: Export Markdown to LaTeX (.tex)
+      - name: Export Markdown to Standalone LaTeX (.tex)
         run: |
           pandoc README.md \
             --from markdown \
             --to latex \
+            --standalone \
+            -V geometry:a4paper \
+            -V geometry:margin=2cm \
             -o dist-tex/document.tex
 
       - name: Compile LaTeX (.tex) to PDF A4
         run: |
           cd dist-tex
-          pdflatex document.tex
-          pdflatex document.tex
+          pdflatex -interaction=nonstopmode document.tex
+          pdflatex -interaction=nonstopmode document.tex
 
       - uses: actions/upload-artifact@v4
         with:
           name: academic-latex-outputs
-          path: dist-tex/*.{tex,pdf}
+          path: |
+            dist-tex/*.tex
+            dist-tex/*.pdf
           retention-days: 30
