@@ -23,8 +23,9 @@ jobs:
             texlive-latex-extra \
             texlive-fonts-recommended
 
-      - name: Create output directory
-        run: mkdir -p dist-tex
+      - name: Create absolute output directory
+        run: |
+          mkdir -p $PWD/dist-tex
 
       - name: Export Markdown to Standalone LaTeX (.tex)
         run: |
@@ -34,18 +35,19 @@ jobs:
             --standalone \
             -V geometry:a4paper \
             -V geometry:margin=2cm \
-            -o dist-tex/document.tex
+            -o $PWD/dist-tex/document.tex
 
       - name: Compile LaTeX (.tex) to PDF A4
         run: |
-          cd dist-tex
+          cd $PWD/dist-tex
           pdflatex -interaction=nonstopmode document.tex
           pdflatex -interaction=nonstopmode document.tex
 
-      - uses: actions/upload-artifact@v4
+      - name: Verify and Upload Academic LaTeX Outputs
+        uses: actions/upload-artifact@v4
         with:
           name: academic-latex-outputs
           path: |
-            dist-tex/*.tex
-            dist-tex/*.pdf
+            dist-tex/document.tex
+            dist-tex/document.pdf
           retention-days: 30
