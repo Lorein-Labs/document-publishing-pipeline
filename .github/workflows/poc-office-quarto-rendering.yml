@@ -1,0 +1,70 @@
+name: PoC Office Suite & Quarto Rendering
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-office-formats:
+    name: Generate DOCX, PPTX, and XLSX via Quarto, Pandoc & Python
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Pandoc, Quarto, and Python OpenPyXL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc python3-openpyxl
+          curl -fsSL https://github.com/quarto-dev/quarto-cli/releases/download/v1.6.42/quarto-1.6.42-linux-amd64.deb -o /tmp/quarto.deb
+          sudo dpkg -i /tmp/quarto.deb
+          rm -f /tmp/quarto.deb
+
+      - name: Create output directory
+        run: mkdir -p dist-office
+
+      - name: 1. Render Markdown to Word (.docx) via Quarto
+        run: |
+          quarto render README.md \
+            --to docx \
+            --output-dir dist-office \
+            --output README-from-quarto.docx
+
+      - name: 2. Convert Markdown -> LaTeX (.tex) -> Word (.docx) via Pandoc
+        run: |
+          pandoc README.md --from markdown --to latex --standalone -o dist-office/source.tex
+          pandoc dist-office/source.tex --from latex --to docx -o dist-office/README-from-latex.docx
+
+      - name: 3. Render Markdown to PowerPoint (.pptx) via Quarto
+        run: |
+          quarto render README.md \
+            --to pptx \
+            --output-dir dist-office \
+            --output README-slides.pptx
+
+      - name: 4. Generate Excel Workbook (.xlsx) via Python
+        run: |
+          python3 -c "
+          import openpyxl
+          wb = openpyxl.Workbook()
+          ws = wb.active
+          ws.title = 'Lorein-Labs Audit'
+          ws.append(['Format', 'Moteur', 'Statut PoC'])
+          ws.append(['DOCX (from MD)', 'Quarto + Pandoc', 'Valide'])
+          ws.append(['DOCX (from TEX)', 'Pandoc LaTeX Reader', 'Valide'])
+          ws.append(['PPTX', 'Quarto + Pandoc', 'Valide'])
+          ws.append(['XLSX', 'Python OpenPyXL', 'Valide'])
+          wb.save('dist-office/Lorein-Labs-Formats-Matrix.xlsx')
+          "
+
+      - name: Upload Office Suite PoC Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: office-suite-poc-outputs
+          path: dist-office/*
+          retention-days: 30

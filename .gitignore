@@ -1,0 +1,30 @@
+# Repertoires de sortie et de build CI/CD
+dist/
+dist-tex/
+dist-office/
+build/
+_site/
+.quarto/
+
+# Fichiers intermediaires et journaux LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# Environnements et caches Python / Systemes
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+*~
+*.swp
