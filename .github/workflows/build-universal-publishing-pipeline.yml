@@ -1,0 +1,118 @@
+name: Build Universal Publishing Pipeline (PDF, LaTeX, DOCX, PPTX, XLSX)
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-all-formats:
+    name: Universal Document Transformation Engine
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies (Pandoc, Typst, TeX Live, Python)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pandoc \
+            fonts-liberation \
+            fonts-dejavu \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            python3-openpyxl
+
+          # Installer Typst CLI
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then TYPST_ARCH="x86_64-unknown-linux-musl"; else TYPST_ARCH="aarch64-unknown-linux-musl"; fi
+          curl -fsSL https://github.com/typst/typst/releases/download/v0.13.1/typst-$TYPST_ARCH.tar.xz -o /tmp/typst.tar.xz
+          tar -xf /tmp/typst.tar.xz -C /tmp/
+          sudo mv /tmp/typst-$TYPST_ARCH/typst /usr/local/bin/
+
+          # Installer Quarto CLI
+          curl -fsSL https://github.com/quarto-dev/quarto-cli/releases/download/v1.6.42/quarto-1.6.42-linux-amd64.deb -o /tmp/quarto.deb
+          sudo dpkg -i /tmp/quarto.deb
+          rm -f /tmp/quarto.deb
+
+      - name: Create unified output directory
+        run: mkdir -p universal-dist
+
+      - name: 1. Generate Typst PDF (A4)
+        run: |
+          pandoc README.md \
+            --from markdown \
+            --to pdf \
+            --pdf-engine=typst \
+            -V papersize=a4 \
+            -V font="Liberation Sans" \
+            -V margin.x=2cm -V margin.y=2cm \
+            -o universal-dist/document-typst.pdf
+
+      - name: 2. Generate LaTeX Standalone (.tex) and PDF
+        run: |
+          mkdir -p universal-dist/latex-build
+          pandoc README.md \
+            --from markdown \
+            --to latex \
+            --standalone \
+            -V geometry:a4paper \
+            -V geometry:margin=2cm \
+            -o universal-dist/latex-build/document.tex
+          
+          cd universal-dist/latex-build
+          pdflatex -interaction=nonstopmode document.tex
+          pdflatex -interaction=nonstopmode document.tex
+          cd ../..
+          cp universal-dist/latex-build/document.pdf universal-dist/document-academic.pdf
+          cp universal-dist/latex-build/document.tex universal-dist/document-source.tex
+
+      - name: 3. Generate Word Document (.docx) via Quarto
+        run: |
+          quarto render README.md \
+            --to docx \
+            --output-dir universal-dist \
+            --output document-word.docx
+
+      - name: 4. Generate PowerPoint Presentation (.pptx) via Quarto
+        run: |
+          quarto render README.md \
+            --to pptx \
+            --output-dir universal-dist \
+            --output document-slides.pptx
+
+      - name: 5. Generate Excel Matrix (.xlsx) via Python
+        run: |
+          python3 -c "
+          import openpyxl
+          wb = openpyxl.Workbook()
+          ws = wb.active
+          ws.title = 'Lorein-Labs Universal Matrix'
+          ws.append(['Format ID', 'Extension', 'Moteur de Rendu', 'Statut de Validation'])
+          ws.append(['PDF Typst', '.pdf', 'Typst Engine', 'Valide & Verifie'])
+          ws.append(['PDF LaTeX', '.pdf', 'TeX Live pdflatex', 'Valide & Verifie'])
+          ws.append(['LaTeX Source', '.tex', 'Pandoc Standalone', 'Valide & Verifie'])
+          ws.append(['Word Document', '.docx', 'Quarto / Pandoc', 'Valide & Verifie'])
+          ws.append(['PowerPoint', '.pptx', 'Quarto Presentation', 'Valide & Verifie'])
+          ws.append(['Excel Data', '.xlsx', 'Python OpenPyXL', 'Valide & Verifie'])
+          wb.save('universal-dist/Lorein-Labs-Universal-Matrix.xlsx')
+          "
+
+      - name: Upload Complete Universal Artifacts Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-publishing-outputs
+          path: |
+            universal-dist/*.pdf
+            universal-dist/*.tex
+            universal-dist/*.docx
+            universal-dist/*.pptx
+            universal-dist/*.xlsx
+          retention-days: 30
