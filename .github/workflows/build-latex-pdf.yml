@@ -1,0 +1,41 @@
+name: Build Academic LaTeX PDF
+on:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-latex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pandoc and TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-latex-extra
+
+      - name: Create output directory
+        run: mkdir -p dist-tex
+
+      - name: Export Markdown to LaTeX (.tex)
+        run: |
+          pandoc README.md \
+            --from markdown \
+            --to latex \
+            -o dist-tex/document.tex
+
+      - name: Compile LaTeX (.tex) to PDF A4
+        run: |
+          cd dist-tex
+          pdflatex document.tex
+          pdflatex document.tex
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: academic-latex-outputs
+          path: dist-tex/*.{tex,pdf}
+          retention-days: 30
