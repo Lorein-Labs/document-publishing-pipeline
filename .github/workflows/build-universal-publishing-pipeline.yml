@@ -58,21 +58,22 @@ jobs:
 
       - name: 2. Generate LaTeX Standalone (.tex) and PDF
         run: |
-          mkdir -p universal-dist/latex-build
+          mkdir -p latex-temp
           pandoc README.md \
             --from markdown \
             --to latex \
             --standalone \
             -V geometry:a4paper \
             -V geometry:margin=2cm \
-            -o universal-dist/latex-build/document.tex
+            -o latex-temp/document.tex
           
-          cd universal-dist/latex-build
+          cd latex-temp
           pdflatex -interaction=nonstopmode document.tex
           pdflatex -interaction=nonstopmode document.tex
-          cd ../..
-          cp universal-dist/latex-build/document.pdf universal-dist/document-academic.pdf
-          cp universal-dist/latex-build/document.tex universal-dist/document-source.tex
+          cd ..
+          
+          cp latex-temp/document.pdf universal-dist/document-academic-latex.pdf
+          cp latex-temp/document.tex universal-dist/document-source-latex.tex
 
       - name: 3. Generate Word Document (.docx) via Quarto
         run: |
@@ -109,10 +110,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: universal-publishing-outputs
-          path: |
-            universal-dist/*.pdf
-            universal-dist/*.tex
-            universal-dist/*.docx
-            universal-dist/*.pptx
-            universal-dist/*.xlsx
+          path: universal-dist/*
           retention-days: 30
