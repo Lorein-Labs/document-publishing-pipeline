@@ -1,51 +1,41 @@
 name: Build Documentation PDF (A4)
-
 on:
   push:
-    branches:
-      - main
-      - 'feat/**'
+    branches: [main, 'feat/**']
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   render-pdf:
-    name: Compile Markdown to A4 PDF
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Pandoc and Typst
+      - name: Install Pandoc, Typst, and Standard Fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc
-          curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz -o typst.tar.xz
-          tar -xf typst.tar.xz
-          sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
-          rm -rf typst.tar.xz typst-x86_64-unknown-linux-musl
-
-      - name: Create output directory
-        run: mkdir -p dist
+          sudo apt-get install -y pandoc fonts-liberation fonts-dejavu
+          curl -fsSL https://github.com/typst/typst/releases/download/v0.13.1/typst-x86_64-unknown-linux-musl.tar.xz -o /tmp/typst.tar.xz
+          tar -xf /tmp/typst.tar.xz -C /tmp/
+          sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
 
       - name: Compile README.md to A4 PDF
         run: |
+          mkdir -p dist
           pandoc README.md \
             --from markdown \
             --to pdf \
             --pdf-engine=typst \
             -V papersize=a4 \
-            -V margin-top=2cm \
-            -V margin-bottom=2cm \
-            -V margin-left=2cm \
-            -V margin-right=2cm \
+            -V font="Liberation Sans" \
+            -V margin.x=2cm -V margin.y=2cm \
             -o dist/document-publishing-pipeline-README-A4.pdf
 
-      - name: Upload A4 PDF Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: rendered-documents-a4
           path: dist/*.pdf
