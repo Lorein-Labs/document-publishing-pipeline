@@ -1,0 +1,38 @@
+name: Orchestrate Full Document Publishing Pipeline
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+    inputs:
+      source_file:
+        type: string
+        required: true
+        default: 'README.md'
+
+permissions:
+  contents: read
+
+jobs:
+  step-1-lint:
+    uses: ./.github/workflows/lint-markdown.yml
+    secrets: inherit
+
+  step-2-md-to-latex:
+    needs: step-1-lint
+    uses: ./.github/workflows/md-to-latex.yml
+    with:
+      source_file: ${{ github.event.inputs.source_file || 'README.md' }}
+
+  step-3-latex-to-pdf:
+    needs: step-2-md-to-latex
+    uses: ./.github/workflows/latex-to-pdf.yml
+    with:
+      tex_artifact_name: 'latex-source-output'
+      tex_filename: 'document.tex'
+
+  step-4-md-to-office:
+    needs: step-1-lint
+    uses: ./.github/workflows/md-to-office.yml
+    with:
+      source_file: ${{ github.event.inputs.source_file || 'README.md' }}

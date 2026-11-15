@@ -1,0 +1,53 @@
+name: Convert Markdown to Office Suite (DOCX, PPTX, XLSX)
+
+on:
+  workflow_call:
+    inputs:
+      source_file:
+        type: string
+        required: true
+        default: 'README.md'
+      artifact_name:
+        type: string
+        required: false
+        default: 'office-suite-outputs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-office:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pandoc, Quarto and OpenPyXL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc python3-openpyxl
+          curl -fsSL https://github.com/quarto-dev/quarto-cli/releases/download/v1.6.42/quarto-1.6.42-linux-amd64.deb -o /tmp/quarto.deb
+          sudo dpkg -i /tmp/quarto.deb
+          rm -f /tmp/quarto.deb
+
+      - name: Render DOCX, PPTX and XLSX
+        run: |
+          mkdir -p dist-office
+          quarto render ${{ inputs.source_file }} --to docx --output-dir dist-office --output document.docx
+          quarto render ${{ inputs.source_file }} --to pptx --output-dir dist-office --output presentation.pptx
+          python3 -c "
+          import openpyxl
+          wb = openpyxl.Workbook()
+          ws = wb.active
+          ws.title = 'Lorein-Labs Audit'
+          ws.append(['Source', 'Format', 'Statut'])
+          ws.append(['${{ inputs.source_file }}', 'DOCX / PPTX / XLSX', 'Genere'])
+          wb.save('dist-office/matrix.xlsx')
+          "
+
+      - name: Upload Office Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name || 'office-suite-outputs' }}
+          path: dist-office/*
+          retention-days: 30

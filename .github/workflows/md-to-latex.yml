@@ -1,0 +1,35 @@
+name: Convert Markdown to Standalone LaTeX (.tex)
+
+on:
+  workflow_call:
+    inputs:
+      source_file:
+        type: string
+        required: true
+        default: 'README.md'
+
+jobs:
+  render-tex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Export Markdown to LaTeX
+        run: |
+          mkdir -p dist-tex
+          pandoc ${{ inputs.source_file }} \
+            --from markdown \
+            --to latex \
+            --standalone \
+            -V geometry:a4paper \
+            -V geometry:margin=2cm \
+            -o dist-tex/document.tex
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: latex-source-output
+          path: dist-tex/document.tex
+          retention-days: 30

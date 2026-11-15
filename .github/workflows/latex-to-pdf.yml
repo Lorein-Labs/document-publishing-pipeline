@@ -1,0 +1,47 @@
+name: Compile LaTeX to PDF A4
+
+on:
+  workflow_call:
+    inputs:
+      tex_artifact_name:
+        type: string
+        required: true
+      tex_filename:
+        type: string
+        required: false
+        default: 'document.tex'
+      output_artifact_name:
+        type: string
+        required: false
+        default: 'compiled-pdf-output'
+
+permissions:
+  contents: read
+
+jobs:
+  compile-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download LaTeX Source Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.tex_artifact_name }}
+          path: build-tex
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+
+      - name: Compile LaTeX to PDF
+        working-directory: build-tex
+        run: |
+          pdflatex -interaction=nonstopmode ${{ inputs.tex_filename }}
+          pdflatex -interaction=nonstopmode ${{ inputs.tex_filename }}
+
+      - name: Upload Compiled PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.output_artifact_name || 'compiled-pdf-output' }}
+          path: build-tex/*.pdf
+          retention-days: 30
