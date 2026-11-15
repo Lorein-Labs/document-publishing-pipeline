@@ -19,16 +19,17 @@ jobs:
       - name: Checkout target repository
         uses: actions/checkout@v4
 
-      - name: Fetch central markdownlint config from governance repo
+            - name: Fetch central markdownlint config from governance repo
         uses: actions/checkout@v4
         with:
-          repository: 'Lorein-Labs/document-publishing-system'
+          repository: 'Lorein-Labs/document-publishing-system' # CORRIGÉ (document au lieu de docunent)
           ref: ${{ inputs.gov_ref || 'v0.19.0' }}
           token: ${{ secrets.LOREIN_GOV_TOKEN || github.token }}
           sparse-checkout: |
             .markdownlint-cli2.jsonc
           sparse-checkout-cone-mode: false
           path: '.gov-config'
+
 
       - name: Run markdownlint-cli2
         uses: DavidAnson/markdownlint-cli2-action@v15
